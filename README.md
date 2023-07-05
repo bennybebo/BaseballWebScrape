@@ -4,7 +4,7 @@ This project is a web scraping tool designed to gather Major League Baseball (ML
 The data sheets can be easily shared on Twitter (@BlueChipProps), providing valuable information for sports betting fans.
 
 How it Works:
-The MLB Data Scraper utilizes web scraping techniques to extract data from different websites that provide MLB statistics, such as player's hit rates, home run rates,
+The program utilizes web scraping techniques to extract data from different websites that provide MLB statistics, such as player's hit rates, home run rates,
 , pitcher matchups for today, YRFI (Yes Run First Inning) probabilities, and current sportsbook odds for a prop. The scraped data is then processed and organized into 
 dataframes and excel sheets that are suitable for sharing on Twitter.
 
