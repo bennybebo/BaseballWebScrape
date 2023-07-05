@@ -1,0 +1,42 @@
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd
+import json
+
+# Send a GET request to the webpage
+url = 'https://baseballsavant.mlb.com/leaderboard/statcast-park-factors?type=year&year=2023&batSide=&stat=index_wOBA&condition=All&rolling=no'
+response = requests.get(url)
+
+soup = BeautifulSoup(response.text, 'html.parser')
+stats_table = soup.find('div', {'class': 'article-template'})
+raw_data = stats_table.find_all('script')
+string_raw_data = str(raw_data)
+
+r_value = 'var queryString'
+index_value = string_raw_data.find(r_value)
+
+new_string_raw_data = string_raw_data[:index_value]
+certain_value = "var data"
+
+split_string = new_string_raw_data.split(certain_value)
+
+new_string_raw_data = split_string[1]
+certain_value = ";\n"
+
+index = new_string_raw_data.find(certain_value)
+
+new_string_raw_data = new_string_raw_data[:index]
+
+execution_string = 'var_data'+new_string_raw_data
+execution_string = execution_string.replace("null","'test'")
+exec(execution_string)
+
+df = pd.DataFrame(var_data)
+df = df.rename(columns={'name_display_club': 'Team','index_hr': 'HR'})
+# Select only the 'Team' and 'HR' columns
+df_selected = df[['Team', 'HR']]
+# Convert DataFrame to a JSON object
+json_data = df_selected.to_json(orient='records')
+# Save the JSON data to a file
+with open('3HrParkTotal.json', 'w') as json_file:
+    json_file.write(json_data)
