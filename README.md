@@ -16,4 +16,4 @@ Data Processing: Once the data is scraped, it goes through a processing phase wh
 This includes handling missing values, formatting headers, converting units, and matching players/teams to collected data.
 
 Data Sheet Generation: The processed data is used to generate data sheets in a presentable format. These sheets use VisualBasic macros in order to format, highlight, and
-beautify the data sheets into a presentable end product that is saved directly to your desktop.
+beautify the data sheets into a presentable end product that is saved directly to your desktop. Using the Dinger Tuesday Template with VBA macros already written, the python program opens the template, fills it with today's data, runs the macro and then closes the file.
