@@ -1,0 +1,64 @@
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd
+
+# Send a GET request to the webpage
+url = 'https://baseballsavant.mlb.com/leaderboard/statcast-park-factors?type=year&year=2023&batSide=&stat=index_wOBA&condition=All&rolling=no'
+response = requests.get(url)
+
+# Parse the HTML content
+soup = BeautifulSoup(response.text, 'html.parser')
+
+# Find the relevant HTML elements containing the stats
+stats_table = soup.find('div', {'class': 'article-template'})
+
+# Extract the data from the HTML elements and store it in a Pandas DataFrame
+raw_data = stats_table.find_all('script')
+string_raw_data = str(raw_data)
+
+r_value = 'var queryString'
+index_value = string_raw_data.find(r_value)
+
+# Slice the string from the beginning up to the index
+new_string_raw_data = string_raw_data[:index_value]
+
+certain_value = "var data"
+
+# Split the string based on the certain value
+split_string = new_string_raw_data.split(certain_value)
+
+# Get the first element of the split string
+new_string_raw_data = split_string[1]
+certain_value = ";\n"
+
+# Find the index of the certain value in the string
+index = new_string_raw_data.find(certain_value)
+
+# Slice the string from the beginning up to the index
+new_string_raw_data = new_string_raw_data[:index]
+
+execution_string = 'var_data'+new_string_raw_data
+execution_string = execution_string.replace("null","'test'")
+exec(execution_string)
+
+df = pd.DataFrame(var_data)
+df = df.drop('grouping_venue_conditions', axis=1)
+df = df.drop('key_is_year_rolling', axis=1)
+df = df.drop('key_num_years_rolling', axis=1)
+df = df.drop('key_year', axis=1)
+df = df.drop('key_bat_side', axis=1)
+df = df.drop('venue_id', axis=1)
+df = df.drop('venue_name', axis=1)
+df = df.drop('main_team_id', axis=1)
+df = df.rename(columns={'name_display_club': 'Team','n_pa': 'PA','index_runs': 'R','index_hardhit': 'HardHit',
+                        'index_woba': 'Park Factor','index_wobatto': '-','index_wobacon': 'wOBACon','index_xwobacon': 'xwOBACon'
+                        ,'index_xbacon': 'xBACON','index_obp': 'OBP','index_so': 'SO','index_bb': 'BB'
+                        ,'index_bacon': 'BACON','index_hits': 'H','index_1b': '1B',
+                        'index_2b': '2B','index_3b': '3B','index_hr': 'HR','year_range': 'Year'})
+
+# Select only the 'Team' and 'HR' columns
+df_selected = df[['Team', 'HR']]
+
+df_selected.to_excel('test.xlsx', index=False)
+
+
