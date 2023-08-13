@@ -12,6 +12,8 @@ from fuzzywuzzy import process
 from bs4 import BeautifulSoup
 
 current_date = datetime.now().strftime("%Y%m%d") # Get current date in proper format
+dt_now = datetime.now()
+start = time.time()
 
 conn = http.client.HTTPSConnection("api.actionnetwork.com") # Establish connection to website
 payload = ""
@@ -111,8 +113,8 @@ away_home_teams = [] # Dictionary that maps away team to home team
 i = 0
 while True: # Loop to gather all home teams playing today and team ids
     try:
-        away_team_name = home_teams_json['games'][i]['teams'][0]['full_name']
-        home_team_name = home_teams_json['games'][i]['teams'][1]['full_name']
+        home_team_name = home_teams_json['games'][i]['teams'][0]['full_name']
+        away_team_name = home_teams_json['games'][i]['teams'][1]['full_name']
         away_home_teams.append([away_team_name, home_team_name, 'Away', home_team_name])
         away_home_teams.append([home_team_name, away_team_name, 'Home', home_team_name])
         i += 1
@@ -148,21 +150,25 @@ if matches:
 else:
     print('No JSON data found.')
 
-home_team_df['Matched Team'] = home_team_df['Home Team'].apply(lambda x: process.extractOne(x, df_selected['Team'], scorer=fuzz.token_sort_ratio)[0])
+df_selected['Team'] = df_selected['Team'].replace('D-backs', 'Diamondbacks')
+home_team_df['Matched Team'] = home_team_df['Home Team'].apply(lambda x: process.extractOne(x, df_selected['Team'], scorer=fuzz.token_set_ratio)[0])
 merged_df = pd.merge(home_team_df, df_selected[['Team', 'HR']], how='left', left_on='Matched Team', right_on='Team')
 merged_df = merged_df[['Team_x', 'Home Team', 'HR']]
 merged_df.rename(columns={'Team_x': 'Team'}, inplace=True)
 
+# Remove duplicates from merged_df based on the 'Team' column
+merged_df = merged_df.drop_duplicates(subset='Team')
+
 new_df = df_new.copy()  # Create a copy of the DataFrame
 new_df['HR'] = df_new['teamName'].map(merged_df.set_index('Team')['HR'])  # Add the 'HR' column
-new_df['HR'].fillna(0, inplace = True)
+new_df['HR'].fillna(0, inplace=True)
 new_df['HR'] = new_df['HR'].astype(int)
 new_df['atBatsPerHomeRun'] = new_df['atBatsPerHomeRun'].replace('-.--', np.nan)
 new_df['atBatsPerHomeRun'] = new_df['atBatsPerHomeRun'].astype(float)
 new_df = new_df.dropna(subset=['Odds'])  # Drop rows with NaN values in the 'odds' column
 new_df = new_df.rename(columns={'playerName': 'Player', 'teamName': 'Team', 'homeRuns_last_15_days': 'HR Last 15 Days',
                       'homeRuns': 'Season HR Total', 'atBatsPerHomeRun': 'AB/HR', 'HR': 'HR in Stadium YTD'})
-new_df = new_df.sort_values(by=['HR Last 15 Days','Season HR Total'], ascending=False)
+new_df = new_df.sort_values(by=['HR Last 15 Days', 'Season HR Total'], ascending=False)
 new_df = new_df.head(35)
 
 new_df['Odds'] = new_df['Odds'].astype(int)
@@ -171,7 +177,7 @@ new_df = new_df[[col for col in new_df.columns if col != 'Odds'] + ['Odds']]
 # Add '+' sign to each odds value
 new_df['Odds'] = '+' + new_df['Odds'].astype(str)
 
-excel_file_path = r'C:\Users\thisi\OneDrive\Desktop\baseball web scrap\Dinger Tuesday Template.xlsm'
+excel_file_path =  r'C:\Users\thisi\OneDrive\Desktop\baseball web scrap\Dinger Tuesday Template.xlsm'
 
 app = xw.App(visible=True)
 workbook = app.books.open(excel_file_path)
@@ -203,3 +209,6 @@ finally:
     workbook.close()
 
     app.quit()
+
+print('Check your desktop for the HR Sheet Pic')
+print("The",dt_now.month,'/',dt_now.day,'/',dt_now.year,"HR Sheet took",round(time.time()-start),"seconds to run.")

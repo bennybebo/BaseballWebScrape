@@ -6,15 +6,14 @@ import json
 import time
 import xlwings as xw
 
-############################################################################################################################################################################
 current_date = datetime.now().strftime("%Y%m%d")  # Get current date in proper format
 dt_now = datetime.now()
 start = time.time()
+
 ############################################################################################################################################################################
 conn = http.client.HTTPSConnection("api.actionnetwork.com")  # Establish connection to website
 payload = ""
 headers = {'authority': "api.actionnetwork.com"}
-
 conn.request("GET", "/web/v1/leagues/8/props/core_bet_type_36_hits?bookIds=69,75,68,123,71,32,76,79%2C75%2C68%2C123%2C71%2C32%2C76%2C79&date=" + current_date, payload, headers)
 res = conn.getresponse()  # Get result of request
 data = res.read()  # Read result
@@ -61,6 +60,13 @@ df_players = pd.DataFrame(player_data)
 
 # Exclude players not in playerid_playername_list
 df_players_filtered = df_players[df_players['Player Name'].isin(playerid_playername_list.values())]
+
+
+
+# Step 1: Remove duplicates based on the "Player Name" column
+df_players_filtered = df_players_filtered.drop_duplicates(subset='Player Name', keep='first')
+
+
 print('Got list of all players you can bet on.')
 ############################################################################################################################################################################
 # Function to calculate hit percentage for a player
@@ -86,7 +92,7 @@ df_players_filtered = df_players_filtered.copy()
 df_players_filtered.loc[:, 'Hit Percentage'] = df_players_filtered['Player ID'].apply(calculate_hit_percentage)
 
 # Filter players with hit percentage >= 80%
-df_players_filtered = df_players_filtered[df_players_filtered['Hit Percentage'] >= 80]
+df_players_filtered = df_players_filtered[df_players_filtered['Hit Percentage'] <= 30]
 ############################################################################################################################################################################
 # Function to calculate hit percentage for a player
 def calculate_hit_percentage2(player_id):
@@ -106,19 +112,38 @@ def calculate_hit_percentage2(player_id):
 # Add 'Hit Percentage' column to df_players_filtered
 df_players_filtered['Hit Percentage2'] = df_players_filtered['Player ID'].apply(calculate_hit_percentage2)
 
-# Sort the DataFrame by 'Hit Percentage' from high to low and then by 'Hit Percentage2' from high to low
-df_players_filtered = df_players_filtered.sort_values(['Hit Percentage', 'Hit Percentage2'], ascending=[False, False])
+# Function to calculate average at-bats per game for a player
+def calculate_avg_ab_per_game(player_id):
+    endpoint_url = f"https://statsapi.mlb.com/api/v1/people/{player_id}/stats?stats=gameLog&group=hitting&season=2023&gameType=R"
+    response = requests.get(endpoint_url)
+    data = response.json()
+    
+    if 'stats' in data and len(data['stats']) > 0:
+        game_log = data['stats'][0]['splits']
+        num_games = len(game_log)
+        at_bats = sum(game['stat']['atBats'] for game in game_log)
+        avg_ab_per_game = at_bats / num_games
+        
+        return avg_ab_per_game
+    
+    return None
+
+# Add 'Avg AB per Game' column to df_players_filtered
+df_players_filtered['Avg AB per Game'] = df_players_filtered['Player ID'].apply(calculate_avg_ab_per_game)
 
 # Sort the DataFrame by 'Hit Percentage' from high to low and then by 'Hit Percentage2' from high to low
-df_players_filtered = df_players_filtered.sort_values(['Hit Percentage', 'Hit Percentage2'], ascending=[False, False])
+df_players_filtered = df_players_filtered.sort_values(['Hit Percentage', 'Hit Percentage2'], ascending=[True, True])
 
 # Select specific columns and rename them
-df_players_filtered = df_players_filtered[['Player Name', 'Team', 'Hit Percentage', 'Hit Percentage2']].rename(columns={
+df_players_filtered = df_players_filtered[['Player Name', 'Team', 'Hit Percentage', 'Hit Percentage2', 'Avg AB per Game']].rename(columns={
     'Player Name': 'Player',
     'Hit Percentage': 'L10 Hit Rate',
     'Hit Percentage2': 'Season Hit Rate'
 })
-print('Calculated hit rate last ten games and hit rate for the season.')
+
+print('Calculated hit rate last ten games, hit rate for the season, and average at-bats per game this season.')
+############################################################################################################################################################################
+
 ############################################################################################################################################################################
 conn = http.client.HTTPSConnection("api.actionnetwork.com") # Establish connection to website
 payload = ""
@@ -316,17 +341,24 @@ merged_df8 = merged_df69.merge(batter_vs_hand_df, left_on='Player', right_on='Pl
 merged_df8['avg_vs_hand'] = merged_df8.apply(lambda row: row['Avg vs Left'] if row['hand'] == 'L' else row['Avg vs Right'], axis=1)
 
 # Select the desired columns in the final dataframe
-final_df = merged_df8[['Player', 'Team', 'L10 Hit Rate', 'Season Hit Rate', 'avg_vs_hand']].copy()
+#final_df = merged_df8[['Player', 'Team', 'L10 Hit Rate', 'Season Hit Rate', 'avg_vs_hand']].copy()
+final_df = merged_df8[['Player', 'Team', 'L10 Hit Rate', 'Season Hit Rate', 'Avg AB per Game', 'avg_vs_hand']].copy()
 
 # Rename the columns in the copied dataframe
 final_df.rename(columns={'avg_vs_hand': 'Avg vs Handed Pitcher'}, inplace=True)
+
+# Drop duplicates based on the "Player" column
+final_df.drop_duplicates(subset='Player', keep='first', inplace=True)
+
+# Replace NaN values in the "Avg vs Handed Pitcher" column with "N/A"
+final_df['Avg vs Handed Pitcher'].fillna('N/A', inplace=True)
 
 # Remove the row index
 #final_df = final_df.reset_index(drop=True, inplace=True)
 final_df.reset_index(drop=True, inplace=True)
 print('Put everything together into final_df')
-############################################################################################################################################################################
-excel_file_path = r'C:\Users\thisi\OneDrive\Desktop\baseball web scrap\One Hit Template.xlsm'
+
+excel_file_path = r'C:\Users\thisi\OneDrive\Desktop\baseball web scrap\Cold Streak Template.xlsm'
 
 app = xw.App(visible=True)
 
@@ -352,5 +384,5 @@ finally:
     workbook.save()
     workbook.close()
     app.quit()
-
-print("The",dt_now.month,'/',dt_now.day,'/',dt_now.year,"Hit Sheet took",round(time.time()-start),"seconds to run.")
+print("Ran the macro in the template Excel file.")
+print("The",dt_now.month,'/',dt_now.day,'/',dt_now.year,"Cold Streak Sheet took",round(time.time()-start),"seconds to run.")
