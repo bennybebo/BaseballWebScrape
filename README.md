@@ -21,6 +21,7 @@ beautify the data sheets into a presentable end product that is saved directly t
 ### Dinger Tuesday Sheet:
 ![Dinger Tuesday Pic](https://github.com/bennybebo/BaseballWebScrape/assets/98127047/0857dfc9-a814-4f3b-92fb-420e69a7f52b)
 
-### Hit Sheet
+### Hit Sheet:
 
-### Cold Streak Sheet
+### Cold Streak Sheet:
+![Cold Streak Pic](https://github.com/bennybebo/BaseballWebScrape/assets/98127047/be0798e4-7e17-48d8-b2aa-e4d0aca1b54f)
