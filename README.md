@@ -17,3 +17,10 @@ This includes handling missing values, formatting headers, converting units, and
 
 Data Sheet Generation: The processed data is used to generate data sheets in a presentable format. These sheets use VisualBasic macros in order to format, highlight, and
 beautify the data sheets into a presentable end product that is saved directly to your desktop. Using the Dinger Tuesday Template with VBA macros already written, the python program opens the template, fills it with today's data, runs the macro and then closes the file.
+
+### Dinger Tuesday Sheet:
+![Dinger Tuesday Pic](https://github.com/bennybebo/BaseballWebScrape/assets/98127047/0857dfc9-a814-4f3b-92fb-420e69a7f52b)
+
+### Hit Sheet
+
+### Cold Streak Sheet
