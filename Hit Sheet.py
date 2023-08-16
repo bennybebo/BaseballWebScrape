@@ -64,60 +64,52 @@ df_players_filtered = df_players[df_players['Player Name'].isin(playerid_playern
 print('Got list of all players you can bet on.')
 ############################################################################################################################################################################
 # Function to calculate hit percentage for a player
-def calculate_hit_percentage(player_id):
+def calculate_hit_percentages(player_id):
     endpoint_url = f"https://statsapi.mlb.com/api/v1/people/{player_id}/stats?stats=gameLog&group=hitting&season=2023&gameType=R"
     response = requests.get(endpoint_url)
     data = response.json()
 
-    if 'stats' in data and len(data['stats']) > 0:
-        game_log = data['stats'][0]['splits']
-        
-        num_games = len(game_log)  # Get the total number of games played
-        
-        if num_games >= 10:  # Check if player has played at least 10 games
-            last_ten_games = game_log[-10:]
-            num_games_with_hits = sum(game['stat']['hits'] > 0 for game in last_ten_games)
-            hit_percentage = (num_games_with_hits / len(last_ten_games)) * 100
-            return hit_percentage  # Return only the hit percentage
+    hit_percentage_last_10 = 0
+    hit_percentage_season = 0
 
-    return None
-
-df_players_filtered = df_players_filtered.copy()
-df_players_filtered.loc[:, 'Hit Percentage'] = df_players_filtered['Player ID'].apply(calculate_hit_percentage)
-
-# Filter players with hit percentage >= 80%
-df_players_filtered = df_players_filtered[df_players_filtered['Hit Percentage'] >= 80]
-############################################################################################################################################################################
-# Function to calculate hit percentage for a player
-def calculate_hit_percentage2(player_id):
-    endpoint_url = f"https://statsapi.mlb.com/api/v1/people/{player_id}/stats?stats=gameLog&group=hitting&season=2023&gameType=R"
-    response = requests.get(endpoint_url)
-    data = response.json()
-    
     if 'stats' in data and len(data['stats']) > 0:
         game_log = data['stats'][0]['splits']
         num_games = len(game_log)
-        num_games_with_hits = sum(game['stat']['hits'] > 0 for game in game_log)
-        hit_percentage2 = (num_games_with_hits / num_games) * 100
-        return hit_percentage2
-    
-    return None
 
-# Add 'Hit Percentage' column to df_players_filtered
-df_players_filtered['Hit Percentage2'] = df_players_filtered['Player ID'].apply(calculate_hit_percentage2)
+        if num_games >= 10:
+            last_ten_games = game_log[-10:]
+            num_games_with_hits_last_10 = sum(game['stat']['hits'] > 0 for game in last_ten_games)
+            hit_percentage_last_10 = (num_games_with_hits_last_10 / len(last_ten_games)) * 100
 
-# Sort the DataFrame by 'Hit Percentage' from high to low and then by 'Hit Percentage2' from high to low
-df_players_filtered = df_players_filtered.sort_values(['Hit Percentage', 'Hit Percentage2'], ascending=[False, False])
+        num_games_with_hits_season = sum(game['stat']['hits'] > 0 for game in game_log)
+        hit_percentage_season = (num_games_with_hits_season / num_games) * 100
 
-# Sort the DataFrame by 'Hit Percentage' from high to low and then by 'Hit Percentage2' from high to low
-df_players_filtered = df_players_filtered.sort_values(['Hit Percentage', 'Hit Percentage2'], ascending=[False, False])
+        return hit_percentage_last_10, hit_percentage_season
 
-# Select specific columns and rename them
-df_players_filtered = df_players_filtered[['Player Name', 'Team', 'Hit Percentage', 'Hit Percentage2']].rename(columns={
-    'Player Name': 'Player',
-    'Hit Percentage': 'L10 Hit Rate',
-    'Hit Percentage2': 'Season Hit Rate'
-})
+    return None, None
+
+df_players = pd.DataFrame(player_data)
+
+# Exclude players not in playerid_playername_list
+df_players_filtered = df_players[df_players['Player Name'].isin(playerid_playername_list.values())]
+
+# Include the 'Player ID' column during the creation of df_players_filtered
+df_players_filtered = df_players_filtered[['Player ID', 'Player Name', 'Team']]
+
+# Apply the calculate_hit_percentages function to player IDs
+hit_percentages = df_players_filtered['Player ID'].apply(calculate_hit_percentages)
+
+# Create a new DataFrame with hit percentages
+hit_percentages_df = pd.DataFrame(hit_percentages.tolist(), columns=['L10 Hit Rate', 'Season Hit Rate'], index=df_players_filtered.index)
+
+# Concatenate the hit_percentages_df with df_players_filtered
+df_players_with_hit_rates = pd.concat([df_players_filtered, hit_percentages_df], axis=1)
+
+# Sort the DataFrame by 'L10 Hit Rate' from high to low and then by 'Season Hit Rate' from high to low
+df_players_sorted = df_players_with_hit_rates.sort_values(['L10 Hit Rate', 'Season Hit Rate'], ascending=[False, False])
+
+df_players_final = df_players_sorted[['Player Name', 'Team', 'L10 Hit Rate', 'Season Hit Rate']]
+
 print('Calculated hit rate last ten games and hit rate for the season.')
 ############################################################################################################################################################################
 conn = http.client.HTTPSConnection("api.actionnetwork.com") # Establish connection to website
@@ -263,7 +255,7 @@ combined_df.rename(columns={'playerName': 'Pitcher'}, inplace=True)  # Rename 'p
 opp_pitchHand_df = combined_df[['Team', 'hand']].copy()
 
 # Merge df_players_filtered and opp_pitchHand_df based on the 'Team' column
-merged_df69 = df_players_filtered.merge(opp_pitchHand_df, on='Team', how='left')
+merged_df69 = df_players_final.merge(opp_pitchHand_df, on='Team', how='left')
 merged_df69.dropna(subset=['hand'], inplace=True)
 ############################################################################################################################################################################
 # vs left handers
@@ -309,17 +301,16 @@ for playerName in vs_left_list:
 batter_vs_hand_df = pd.DataFrame(combined_list7, columns=['Player Name', 'Avg vs Left', 'Avg vs Right'])
 print('Got batting averages for all batters vs lefties and righties')
 ############################################################################################################################################################################
-# Merge the dataframes based on player name
-merged_df8 = merged_df69.merge(batter_vs_hand_df, left_on='Player', right_on='Player Name', how='left')
+merged_df8 = merged_df69.merge(batter_vs_hand_df, left_on='Player Name', right_on='Player Name', how='left')
 
 # Create a new column 'avg_vs_hand' in merged_df
 merged_df8['avg_vs_hand'] = merged_df8.apply(lambda row: row['Avg vs Left'] if row['hand'] == 'L' else row['Avg vs Right'], axis=1)
 
 # Select the desired columns in the final dataframe
-final_df = merged_df8[['Player', 'Team', 'L10 Hit Rate', 'Season Hit Rate', 'avg_vs_hand']].copy()
+final_df = merged_df8[['Player Name', 'Team', 'L10 Hit Rate', 'Season Hit Rate', 'avg_vs_hand']].copy()
 
 # Rename the columns in the copied dataframe
-final_df.rename(columns={'avg_vs_hand': 'Avg vs Handed Pitcher'}, inplace=True)
+final_df.rename(columns={'Player Name': 'Player', 'avg_vs_hand': 'Avg vs Handed Pitcher'}, inplace=True)
 
 # Remove the row index
 #final_df = final_df.reset_index(drop=True, inplace=True)
