@@ -6,15 +6,15 @@ import json
 import time
 import xlwings as xw
 
-############################################################################################################################################################################
+# Get time to see how long program takes to run
 current_date = datetime.now().strftime("%Y%m%d")  # Get current date in proper format
 dt_now = datetime.now()
 start = time.time()
-############################################################################################################################################################################
+###################################################################################
+# Get list of all players you can bet on
 conn = http.client.HTTPSConnection("api.actionnetwork.com")  # Establish connection to website
 payload = ""
 headers = {'authority': "api.actionnetwork.com"}
-
 conn.request("GET", "/web/v1/leagues/8/props/core_bet_type_36_hits?bookIds=69,75,68,123,71,32,76,79%2C75%2C68%2C123%2C71%2C32%2C76%2C79&date=" + current_date, payload, headers)
 res = conn.getresponse()  # Get result of request
 data = res.read()  # Read result
@@ -39,7 +39,6 @@ response = requests.get(endpoint_url)
 data = response.json()
 
 player_data = []
-
 if 'teams' in data and len(data['teams']) > 0:
     for team in data['teams']:
         team_id = team['id']
@@ -62,7 +61,7 @@ df_players = pd.DataFrame(player_data)
 # Exclude players not in playerid_playername_list
 df_players_filtered = df_players[df_players['Player Name'].isin(playerid_playername_list.values())]
 print('Got list of all players you can bet on.')
-############################################################################################################################################################################
+#########################################################################################################
 # Function to calculate hit percentage for a player
 def calculate_hit_percentages(player_id):
     endpoint_url = f"https://statsapi.mlb.com/api/v1/people/{player_id}/stats?stats=gameLog&group=hitting&season=2023&gameType=R"
@@ -92,22 +91,16 @@ df_players = pd.DataFrame(player_data)
 
 # Exclude players not in playerid_playername_list
 df_players_filtered = df_players[df_players['Player Name'].isin(playerid_playername_list.values())]
-
 # Include the 'Player ID' column during the creation of df_players_filtered
 df_players_filtered = df_players_filtered[['Player ID', 'Player Name', 'Team']]
-
 # Apply the calculate_hit_percentages function to player IDs
 hit_percentages = df_players_filtered['Player ID'].apply(calculate_hit_percentages)
-
 # Create a new DataFrame with hit percentages
 hit_percentages_df = pd.DataFrame(hit_percentages.tolist(), columns=['L10 Hit Rate', 'Season Hit Rate'], index=df_players_filtered.index)
-
 # Concatenate the hit_percentages_df with df_players_filtered
 df_players_with_hit_rates = pd.concat([df_players_filtered, hit_percentages_df], axis=1)
-
 # Sort the DataFrame by 'L10 Hit Rate' from high to low and then by 'Season Hit Rate' from high to low
 df_players_sorted = df_players_with_hit_rates.sort_values(['L10 Hit Rate', 'Season Hit Rate'], ascending=[False, False])
-
 df_players_final = df_players_sorted[['Player Name', 'Team', 'L10 Hit Rate', 'Season Hit Rate']]
 
 print('Calculated hit rate last ten games and hit rate for the season.')
@@ -115,7 +108,6 @@ print('Calculated hit rate last ten games and hit rate for the season.')
 conn = http.client.HTTPSConnection("api.actionnetwork.com") # Establish connection to website
 payload = ""
 headers = { 'authority': "api.actionnetwork.com" }
-
 conn.request("GET", "/web/v1/scoreboard/mlb?period=game&bookIds=15%2C30%2C76%2C75%2C123%2C69%2C68%2C972%2C71%2C247%2C79&date=" + current_date, payload, headers)
 res = conn.getresponse() # Get result of request
 data = res.read() # Read result
@@ -142,7 +134,6 @@ print('Got the scedhule of all the games today.')
 conn = http.client.HTTPSConnection("api.actionnetwork.com") # Establish connection to website
 payload = ""
 headers = { 'authority': "api.actionnetwork.com" }
-
 conn.request("GET", "/web/v1/leagues/8/projections/core_bet_type_37_strikeouts?bookIds=69,75,68,123,71,32,76,79&date=" + current_date, payload, headers)
 res = conn.getresponse() # Get result of request
 data = res.read() # Read result
@@ -204,7 +195,6 @@ print('Got the list of all the pitchers starting today.')
 conn = http.client.HTTPSConnection("api.actionnetwork.com") # Establish connection to website
 payload = ""
 headers = { 'authority': "api.actionnetwork.com" }
-
 conn.request("GET", "/web/v1/scoreboard/mlb?period=game&date=" + current_date, payload, headers)
 res = conn.getresponse() # Get result of request
 data = res.read() # Read result
@@ -311,10 +301,8 @@ final_df = merged_df8[['Player Name', 'Team', 'L10 Hit Rate', 'Season Hit Rate',
 
 # Rename the columns in the copied dataframe
 final_df.rename(columns={'Player Name': 'Player', 'avg_vs_hand': 'Avg vs Handed Pitcher'}, inplace=True)
-
-# Remove the row index
-#final_df = final_df.reset_index(drop=True, inplace=True)
 final_df.reset_index(drop=True, inplace=True)
+final_df = final_df.head(25)
 print('Put everything together into final_df')
 ############################################################################################################################################################################
 excel_file_path = r'C:\Users\thisi\OneDrive\Desktop\baseball web scrap\One Hit Template.xlsm'

@@ -19,9 +19,9 @@ conn = http.client.HTTPSConnection("api.actionnetwork.com") # Establish connecti
 payload = ""
 headers = { 'authority': "api.actionnetwork.com" }
 
-"""
-Scraping player HR odds from fanDuel
-"""
+
+# Scraping player HR odds from fanDuel
+
 conn.request("GET", "/web/v1/leagues/8/props/core_bet_type_33_hr?bookIds=69%2C75%2C68%2C123%2C71%2C32%2C76%2C79&date=" + current_date, payload, headers)
 res = conn.getresponse() # Get result of request
 data = res.read() # Read result
@@ -65,9 +65,8 @@ season_data_url = 'https://bdfed.stitch.mlbinfra.com/bdfed/stats/player?stitch_e
 # MLB stats for a  player from the last 15 days url
 last_15_days_data_url = 'https://bdfed.stitch.mlbinfra.com/bdfed/stats/player?stitch_env=prod&season=2023&sportId=1&stats=season&group=hitting&gameType=R&limit=700&offset=0&sortStat=onBasePlusSlugging&order=desc&playerPool=ALL&daysBack=-14'
 
-"""
-Scraping MLB player stats
-"""
+# Scraping MLB player stats
+
 r_season = requests.get(url= season_data_url).json()
 df_season_stats = pd.DataFrame(r_season['stats'])
 time.sleep(2)     #Wait in between
@@ -100,9 +99,8 @@ df_new = df_combined_stats.copy()
 df_new['Odds'] = odds_list.copy()
 df_new = df_new[['playerName', 'teamName', 'homeRuns_last_15_days', 'homeRuns', 'atBatsPerHomeRun', 'Odds']]
 
-'''
-Scraping home team data
-'''
+# Scraping home team data
+
 conn.request("GET", "/web/v1/scoreboard/mlb?period=game&bookIds=15%2C30%2C76%2C75%2C123%2C69%2C68%2C972%2C71%2C247%2C79&date=" + current_date, payload, headers)
 res = conn.getresponse() # Get result of request
 data = res.read() # Read result
@@ -125,9 +123,8 @@ while True: # Loop to gather all home teams playing today and team ids
 home_team_df2 = pd.DataFrame(away_home_teams, columns=['Team', 'Opponent', 'Location', 'Home Team'])
 home_team_df = home_team_df2[['Team', 'Home Team']]
 
-"""
-BYEBYE SAMUEL
-"""
+# Scraping home run totals for each stadium
+
 # Send a GET request to the webpage
 url = 'https://baseballsavant.mlb.com/leaderboard/statcast-park-factors?type=year&year=2023&batSide=&stat=index_wOBA&condition=All&rolling=no'
 response = requests.get(url)
