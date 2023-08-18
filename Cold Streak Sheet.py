@@ -106,10 +106,6 @@ df_players_final = df_players_sorted[['Player Name', 'Team', 'L10 Hit Rate', 'Se
 
 print('Calculated hit rate last ten games, hit rate for the season, and average at-bats per game this season.')
 #######################################################################################################
-conn = http.client.HTTPSConnection("api.actionnetwork.com") # Establish connection to website
-payload = ""
-headers = { 'authority': "api.actionnetwork.com" }
-
 conn.request("GET", "/web/v1/scoreboard/mlb?period=game&bookIds=15%2C30%2C76%2C75%2C123%2C69%2C68%2C972%2C71%2C247%2C79&date=" + current_date, payload, headers)
 res = conn.getresponse() # Get result of request
 data = res.read() # Read result
@@ -133,10 +129,6 @@ home_team_df2 = pd.DataFrame(away_home_teams, columns=['Team', 'Opponent', 'Loca
 home_team_df = home_team_df2[['Team', 'Home Team']]
 print('Got the scedhule of all the games today.')
 ############################################################################################################################################################################
-conn = http.client.HTTPSConnection("api.actionnetwork.com") # Establish connection to website
-payload = ""
-headers = { 'authority': "api.actionnetwork.com" }
-
 conn.request("GET", "/web/v1/leagues/8/projections/core_bet_type_37_strikeouts?bookIds=69,75,68,123,71,32,76,79&date=" + current_date, payload, headers)
 res = conn.getresponse() # Get result of request
 data = res.read() # Read result
@@ -195,10 +187,6 @@ for playerid in playerid_playername_list:
 df_updated = pd.DataFrame(playerid_playername_hand_teamid_list, columns=['playerId', 'playerName', 'hand', 'teamId'])
 print('Got the list of all the pitchers starting today.')
 ##################################################################################################
-conn = http.client.HTTPSConnection("api.actionnetwork.com") # Establish connection to website
-payload = ""
-headers = { 'authority': "api.actionnetwork.com" }
-
 conn.request("GET", "/web/v1/scoreboard/mlb?period=game&date=" + current_date, payload, headers)
 res = conn.getresponse() # Get result of request
 data = res.read() # Read result
