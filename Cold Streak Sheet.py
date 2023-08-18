@@ -6,18 +6,22 @@ import json
 import time
 import xlwings as xw
 
-current_date = datetime.now().strftime("%Y%m%d")  # Get current date in proper format
+current_date = datetime.now().strftime("%Y%m%d") # Get current date in proper format
+conn = http.client.HTTPSConnection("api.actionnetwork.com") # Establish connection to website
+payload = ""
+headers = { 'authority': "api.actionnetwork.com" }
+
+def get_json_data(endpoint):
+   conn.request("GET", endpoint + current_date, payload, headers)
+   res = conn.getresponse() # Get result of request
+   data = res.read() # Read result
+   json_data = data.decode("utf-8") # Decode result data
+   return json.loads(json_data)
+
 dt_now = datetime.now()
 start = time.time()
 ############################################################################################################################################################################
-conn = http.client.HTTPSConnection("api.actionnetwork.com")  # Establish connection to website
-payload = ""
-headers = {'authority': "api.actionnetwork.com"}
-conn.request("GET", "/web/v1/leagues/8/props/core_bet_type_36_hits?bookIds=69,75,68,123,71,32,76,79%2C75%2C68%2C123%2C71%2C32%2C76%2C79&date=" + current_date, payload, headers)
-res = conn.getresponse()  # Get result of request
-data = res.read()  # Read result
-json_data = data.decode("utf-8")  # Decode result data
-props_json = json.loads(json_data)  # Load data as JSON
+props_json = get_json_data("/web/v1/leagues/8/props/core_bet_type_36_hits?bookIds=69,75,68,123,71,32,76,79%2C75%2C68%2C123%2C71%2C32%2C76%2C79&date=")
 
 playerid_playername_list = {}  # Dictionary to map playerId to playerName
 
@@ -106,11 +110,7 @@ df_players_final = df_players_sorted[['Player Name', 'Team', 'L10 Hit Rate', 'Se
 
 print('Calculated hit rate last ten games, hit rate for the season, and average at-bats per game this season.')
 #######################################################################################################
-conn.request("GET", "/web/v1/scoreboard/mlb?period=game&bookIds=15%2C30%2C76%2C75%2C123%2C69%2C68%2C972%2C71%2C247%2C79&date=" + current_date, payload, headers)
-res = conn.getresponse() # Get result of request
-data = res.read() # Read result
-json_data = data.decode("utf-8") # Decode result data
-home_teams_json = json.loads(json_data) # Load data as a JSON
+home_teams_json = get_json_data("/web/v1/scoreboard/mlb?period=game&bookIds=15%2C30%2C76%2C75%2C123%2C69%2C68%2C972%2C71%2C247%2C79&date=")
 
 away_home_teams = [] # Dictionary that maps away team to home team
 i = 0
@@ -129,11 +129,7 @@ home_team_df2 = pd.DataFrame(away_home_teams, columns=['Team', 'Opponent', 'Loca
 home_team_df = home_team_df2[['Team', 'Home Team']]
 print('Got the scedhule of all the games today.')
 ############################################################################################################################################################################
-conn.request("GET", "/web/v1/leagues/8/projections/core_bet_type_37_strikeouts?bookIds=69,75,68,123,71,32,76,79&date=" + current_date, payload, headers)
-res = conn.getresponse() # Get result of request
-data = res.read() # Read result
-json_data = data.decode("utf-8") # Decode result data
-props_json = json.loads(json_data) # Load data as a JSON
+props_json = get_json_data("/web/v1/leagues/8/projections/core_bet_type_37_strikeouts?bookIds=69,75,68,123,71,32,76,79&date=")
 
 playerid_playername_list = {} # Dictionary to map playerId to playerName
 i= 0
@@ -187,11 +183,7 @@ for playerid in playerid_playername_list:
 df_updated = pd.DataFrame(playerid_playername_hand_teamid_list, columns=['playerId', 'playerName', 'hand', 'teamId'])
 print('Got the list of all the pitchers starting today.')
 ##################################################################################################
-conn.request("GET", "/web/v1/scoreboard/mlb?period=game&date=" + current_date, payload, headers)
-res = conn.getresponse() # Get result of request
-data = res.read() # Read result
-json_data = data.decode("utf-8") # Decode result data
-props_json = json.loads(json_data) # Load data as a JSON
+props_json = get_json_data("/web/v1/scoreboard/mlb?period=game&date=")
 
 away_teamId = props_json['games'][0]['teams'][0]['id']
 away_teamName = props_json['games'][0]['teams'][0]['full_name']
