@@ -12,25 +12,24 @@ from fuzzywuzzy import process
 from bs4 import BeautifulSoup
 
 current_date = datetime.now().strftime("%Y%m%d") # Get current date in proper format
-dt_now = datetime.now()
-start = time.time()
-
 conn = http.client.HTTPSConnection("api.actionnetwork.com") # Establish connection to website
 payload = ""
 headers = { 'authority': "api.actionnetwork.com" }
 
+def get_json_data(endpoint):
+   conn.request("GET", endpoint + current_date, payload, headers)
+   res = conn.getresponse() # Get result of request
+   data = res.read() # Read result
+   json_data = data.decode("utf-8") # Decode result data
+   return json.loads(json_data)
 
+dt_now = datetime.now()
+start = time.time()
 # Scraping player HR odds from fanDuel
-
-conn.request("GET", "/web/v1/leagues/8/props/core_bet_type_33_hr?bookIds=69%2C75%2C68%2C123%2C71%2C32%2C76%2C79&date=" + current_date, payload, headers)
-res = conn.getresponse() # Get result of request
-data = res.read() # Read result
-json_data = data.decode("utf-8") # Decode result data
-props_json = json.loads(json_data) # Load data as a JSON
+props_json = get_json_data("/web/v1/leagues/8/props/core_bet_type_33_hr?bookIds=69%2C75%2C68%2C123%2C71%2C32%2C76%2C79&date=")
 
 playerid_playername_list = {} # Dictionary to map playerId to playerName
 playerid_odds_list = {} # Dictionary to map playedId to odds
-
 i= 0
 while True: # Get playerName and playerId and store in dictionary
   try:
@@ -66,10 +65,9 @@ season_data_url = 'https://bdfed.stitch.mlbinfra.com/bdfed/stats/player?stitch_e
 last_15_days_data_url = 'https://bdfed.stitch.mlbinfra.com/bdfed/stats/player?stitch_env=prod&season=2023&sportId=1&stats=season&group=hitting&gameType=R&limit=700&offset=0&sortStat=onBasePlusSlugging&order=desc&playerPool=ALL&daysBack=-14'
 
 # Scraping MLB player stats
-
 r_season = requests.get(url= season_data_url).json()
 df_season_stats = pd.DataFrame(r_season['stats'])
-time.sleep(2)     #Wait in between
+time.sleep(1)     #Wait in between
 r_15days = requests.get(url = last_15_days_data_url).json()
 df_15days_stats = pd.DataFrame(r_15days['stats'])
 
@@ -100,12 +98,7 @@ df_new['Odds'] = odds_list.copy()
 df_new = df_new[['playerName', 'teamName', 'homeRuns_last_15_days', 'homeRuns', 'atBatsPerHomeRun', 'Odds']]
 
 # Scraping home team data
-
-conn.request("GET", "/web/v1/scoreboard/mlb?period=game&bookIds=15%2C30%2C76%2C75%2C123%2C69%2C68%2C972%2C71%2C247%2C79&date=" + current_date, payload, headers)
-res = conn.getresponse() # Get result of request
-data = res.read() # Read result
-json_data = data.decode("utf-8") # Decode result data
-home_teams_json = json.loads(json_data) # Load data as a JSON
+home_teams_json = get_json_data("/web/v1/scoreboard/mlb?period=game&bookIds=15%2C30%2C76%2C75%2C123%2C69%2C68%2C972%2C71%2C247%2C79&date=")
 
 away_home_teams = [] # Dictionary that maps away team to home team
 i = 0
@@ -124,10 +117,8 @@ home_team_df2 = pd.DataFrame(away_home_teams, columns=['Team', 'Opponent', 'Loca
 home_team_df = home_team_df2[['Team', 'Home Team']]
 
 # Scraping home run totals for each stadium
-
-# Send a GET request to the webpage
 url = 'https://baseballsavant.mlb.com/leaderboard/statcast-park-factors?type=year&year=2023&batSide=&stat=index_wOBA&condition=All&rolling=no'
-response = requests.get(url)
+response = requests.get(url) # Send a GET request to the webpage
 
 soup = BeautifulSoup(response.text, 'html.parser')
 stats_table = soup.find('div', {'class': 'article-template'})
