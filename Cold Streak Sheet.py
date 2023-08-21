@@ -5,6 +5,7 @@ import http.client
 import json
 import time
 import xlwings as xw
+import threading
 
 current_date = datetime.now().strftime("%Y%m%d") # Get current date in proper format
 conn = http.client.HTTPSConnection("api.actionnetwork.com") # Establish connection to website
@@ -92,23 +93,34 @@ def calculate_statistics(player_id):
     
     return None, None, None
 
-df_players = pd.DataFrame(player_data)
+def asynchronous_task(player_id, result_dict):
+    hit_percentages = calculate_statistics(player_id)
+    result_dict[player_id] = hit_percentages
+    
+player_ids = df_players_filtered['Player ID'].tolist()
+results = {}  # Dictionary to store results
 
-# Exclude players not in playerid_playername_list
-df_players_filtered = df_players[df_players['Player Name'].isin(playerid_playername_list.values())]
-# Include the 'Player ID' column during the creation of df_players_filtered
-df_players_filtered = df_players_filtered[['Player ID', 'Player Name', 'Team']]
-# Apply the calculate_hit_percentages function to player IDs
-hit_percentages = df_players_filtered['Player ID'].apply(calculate_statistics)
+threads = []
+for player_id in player_ids:
+    thread = threading.Thread(target=asynchronous_task, args=(player_id, results))
+    threads.append(thread)
+    thread.start()
+
+# Wait for all threads to finish
+for thread in threads:
+    thread.join()
+
 # Create a new DataFrame with hit percentages
-hit_percentages_df = pd.DataFrame(hit_percentages.tolist(), columns=['L10 Hit Rate', 'Season Hit Rate', 'Avg AB per Game'], index=df_players_filtered.index)
-# Concatenate the hit_percentages_df with df_players_filtered
-df_players_with_hit_rates = pd.concat([df_players_filtered, hit_percentages_df], axis=1)
-# Sort the DataFrame by 'L10 Hit Rate' from high to low and then by 'Season Hit Rate' from high to low
-df_players_sorted = df_players_with_hit_rates.sort_values(['L10 Hit Rate', 'Avg AB per Game', 'Season Hit Rate'], ascending=[True, True, True])
-df_players_final = df_players_sorted[['Player Name', 'Team', 'L10 Hit Rate', 'Season Hit Rate', 'Avg AB per Game']]
+hit_percentages_df = pd.DataFrame.from_dict(results, orient='index', columns=['L10 Hit Rate', 'Season Hit Rate', 'Avg AB per Game'])
+hit_percentages_df.index.name = 'Player ID'
 
-print('Calculated hit rate last ten games, hit rate for the season, and average at-bats per game this season.')
+# Merge hit_percentages_df with df_players_filtered
+df_players_final = df_players_filtered.merge(hit_percentages_df, left_on='Player ID', right_index=True)
+
+# Sort the DataFrame by 'L10 Hit Rate' from high to low and then by 'Season Hit Rate' from high to low
+df_players_final = df_players_final.sort_values(['L10 Hit Rate', 'Season Hit Rate', 'Avg AB per Game'], ascending=[True, True, True])
+df_players_final = df_players_final[['Player Name', 'Team', 'L10 Hit Rate', 'Season Hit Rate', 'Avg AB per Game']]
+print('Calculated hit rate last ten games and hit rate for the season.')
 #######################################################################################################
 home_teams_json = get_json_data("/web/v1/scoreboard/mlb?period=game&bookIds=15%2C30%2C76%2C75%2C123%2C69%2C68%2C972%2C71%2C247%2C79&date=")
 
